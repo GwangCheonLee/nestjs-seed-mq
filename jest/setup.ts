@@ -1,6 +1,6 @@
-import {DataSource} from 'typeorm';
-import {DataType, newDb} from 'pg-mem';
-import {v4} from 'uuid';
+import { DataSource } from 'typeorm';
+import { DataType, newDb } from 'pg-mem';
+import { v4 } from 'uuid';
 
 // eslint-disable-next-line require-jsdoc
 export const setupDataSource = async () => {
