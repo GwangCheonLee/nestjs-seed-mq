@@ -56,7 +56,6 @@ describe('AppModule', () => {
 
   afterAll(async () => {
     await app.close();
-    await dataSource.destroy();
   });
 
   it('should load ConfigModule and provide ConfigService globally', () => {
