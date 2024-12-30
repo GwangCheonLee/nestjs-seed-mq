@@ -4,29 +4,48 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { setupDataSource } from '../jest/setup';
 import { RabbitMQProducerService } from './rabbitmq/producer/rabbit-mq-producer.service';
 import { RabbitMQConsumerController } from './rabbitmq/consumer/rabbit-mq-consumer.controller';
+import * as amqplibMocks from 'amqplib-mocks';
+import { setupDataSource } from '../jest/setup';
+
+jest.mock('amqp-connection-manager', () => {
+  return {
+    connect: jest.fn(() => amqplibMocks.connect()),
+    AmqpConnectionManager: jest.fn().mockImplementation(() => ({
+      createChannel: jest.fn().mockResolvedValue({
+        assertQueue: jest.fn(),
+        sendToQueue: jest.fn(),
+        consume: jest.fn(),
+      }),
+      addListener: jest.fn(),
+    })),
+  };
+});
 
 describe('AppModule', () => {
   let app: INestApplication;
-  let moduleRef: TestingModule;
   let dataSource: DataSource;
 
   beforeAll(async () => {
     dataSource = await setupDataSource();
-    moduleRef = await Test.createTestingModule({
+
+    const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [
         AppModule,
         TypeOrmModule.forRoot({
           type: 'postgres',
           database: 'test',
-          entities: [],
           synchronize: true,
+          entities: [], // 실제 엔티티 경로 추가
         }),
-        TypeOrmModule.forFeature([]),
       ],
     })
+      .overrideProvider('RABBIT_MQ_PRODUCER')
+      .useValue({
+        connect: jest.fn().mockResolvedValue(undefined),
+        emit: jest.fn(),
+      })
       .overrideProvider(DataSource)
       .useValue(dataSource)
       .compile();
@@ -37,6 +56,7 @@ describe('AppModule', () => {
 
   afterAll(async () => {
     await app.close();
+    await dataSource.destroy();
   });
 
   it('should load ConfigModule and provide ConfigService globally', () => {
@@ -51,14 +71,14 @@ describe('AppModule', () => {
   });
 
   it('should initialize RabbitMQProducerService and RabbitMQConsumerController', () => {
-    const rabbitMQProducerService = app.get<RabbitMQProducerService>(
+    const producerService = app.get<RabbitMQProducerService>(
       RabbitMQProducerService,
     );
-    const rabbitMQConsumerController = app.get<RabbitMQConsumerController>(
+    const consumerController = app.get<RabbitMQConsumerController>(
       RabbitMQConsumerController,
     );
 
-    expect(rabbitMQProducerService).toBeDefined();
-    expect(rabbitMQConsumerController).toBeDefined();
+    expect(producerService).toBeDefined();
+    expect(consumerController).toBeDefined();
   });
 });
