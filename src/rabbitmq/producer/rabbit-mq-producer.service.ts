@@ -34,6 +34,16 @@ export class RabbitMQProducerService implements OnApplicationBootstrap {
    * @param {number} deliveryMode 메시지 지속성 옵션 (1: 비영구적, 2: 영구적)
    */
   sendMessage(pattern: string, data: object, deliveryMode: number = 2): void {
+    if (typeof pattern !== 'string' || pattern.trim() === '') {
+      throw new Error('Pattern must be a non-empty string');
+    }
+
+    if (![1, 2].includes(deliveryMode)) {
+      throw new Error(
+        'Delivery mode must be either 1 (non-persistent) or 2 (persistent)',
+      );
+    }
+
     if (typeof data !== 'object' || data === null) {
       throw new Error('The data must be a non-null object');
     }
