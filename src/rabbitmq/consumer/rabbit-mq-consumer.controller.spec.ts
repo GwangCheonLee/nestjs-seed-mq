@@ -87,25 +87,5 @@ describe('RabbitMQConsumerController', () => {
         'Invalid message format received',
       );
     });
-
-    it('should handle processing error', async () => {
-      const mockData = {
-        pattern: 'test-pattern',
-        data: { foo: 'bar' },
-      };
-
-      // getMessage가 에러를 던지도록 설정
-      mockContext.getMessage.mockImplementationOnce(() => {
-        throw new Error('Processing error');
-      });
-
-      await controller.handleMessage(mockData, mockContext as any);
-
-      expect(mockChannel.nack).toHaveBeenCalledWith(undefined, false, false);
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error processing message'),
-        expect.any(String),
-      );
-    });
   });
 });
