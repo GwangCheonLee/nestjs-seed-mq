@@ -49,16 +49,8 @@ export class RabbitMQConsumerController {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
-    try {
-      this.logger.log(`Processing message with pattern: ${data.pattern}`);
+    this.logger.log(`Processing message with pattern: ${data.pattern}`);
 
-      channel.ack(originalMsg);
-    } catch (error) {
-      this.logger.error(
-        `Error processing message: ${error.message}`,
-        error.stack,
-      );
-      channel.nack(originalMsg, false, false);
-    }
+    channel.ack(originalMsg);
   }
 }

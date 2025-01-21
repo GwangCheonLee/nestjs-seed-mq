@@ -7,7 +7,6 @@ describe('RabbitMQConsumerController', () => {
   let controller: RabbitMQConsumerController;
   let configService: ConfigService;
 
-  // Mock RmqContext
   const mockChannel = {
     ack: jest.fn(),
     nack: jest.fn(),
@@ -19,7 +18,6 @@ describe('RabbitMQConsumerController', () => {
   };
 
   beforeEach(async () => {
-    // ConfigService Mock 생성
     const mockConfigService = {
       get: jest.fn().mockReturnValue('test-queue'),
     };
@@ -48,17 +46,29 @@ describe('RabbitMQConsumerController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('constructor', () => {
-    it('should get queue name from config service', () => {
-      expect(configService.get).toHaveBeenCalledWith('RABBITMQ_QUEUE');
-    });
+  it('should correctly initialize message pattern from config service', () => {
+    const expectedPattern = 'test-queue';
+    expect(controller['messagePattern']).toBe(expectedPattern);
   });
 
   describe('handleMessage', () => {
     beforeEach(() => {
-      // Logger mock 설정
       jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
       jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    });
+
+    it('should handle data without pattern', async () => {
+      const invalidData = 1 as unknown as {
+        pattern: string;
+        data: any;
+      };
+
+      await controller.handleMessage(invalidData, mockContext as any);
+
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Invalid message format received',
+      );
+      expect(mockChannel.ack).not.toHaveBeenCalled();
     });
 
     it('should successfully process valid message', async () => {
@@ -71,10 +81,13 @@ describe('RabbitMQConsumerController', () => {
 
       expect(mockContext.getChannelRef).toHaveBeenCalled();
       expect(mockContext.getMessage).toHaveBeenCalled();
-      expect(mockChannel.ack).toHaveBeenCalled();
       expect(Logger.prototype.log).toHaveBeenCalledWith(
         expect.stringContaining('Received message'),
       );
+      expect(Logger.prototype.log).toHaveBeenCalledWith(
+        expect.stringContaining('Processing message with pattern'),
+      );
+      expect(mockChannel.ack).toHaveBeenCalled();
     });
 
     it('should handle invalid message format', async () => {
@@ -86,6 +99,11 @@ describe('RabbitMQConsumerController', () => {
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Invalid message format received',
       );
+    });
+
+    it('should verify the message pattern matches configuration', () => {
+      const expectedPattern = configService.get('RABBITMQ_QUEUE');
+      expect(controller['messagePattern']).toBe(expectedPattern);
     });
   });
 });
